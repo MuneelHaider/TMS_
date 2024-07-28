@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TMS_.Data;
 using TMS_.Models;
 using BCrypt.Net;
@@ -90,6 +91,71 @@ namespace TMS_.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Initial admin registered successfully.");
+        }
+
+        [HttpDelete("delete-user/{id}")]
+        public async Task<IActionResult> DeleteUser(int id, [FromHeader] string adminUsername)
+        {
+            var admin = await _context.Users.FirstOrDefaultAsync(u => u.Username == adminUsername && u.Role == "Admin");
+            if (admin == null)
+            {
+                return Unauthorized("Only admins can delete users.");
+            }
+
+            var user = await _context.Users.Include(u => u.AssignedTasks).FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            if (user.Role == "Admin")
+            {
+                return Unauthorized("Admins cannot delete other admins.");
+            }
+
+            // Remove assigned tasks
+            foreach (var task in user.AssignedTasks)
+            {
+                _context.UserTasks.Remove(task);
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok("User deleted successfully.");
+        }
+
+        [HttpDelete("delete-own-account/{username}")]
+        public async Task<IActionResult> DeleteOwnAccount(string username)
+        {
+            var user = await _context.Users.Include(u => u.AssignedTasks).FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // Remove assigned tasks
+            foreach (var task in user.AssignedTasks)
+            {
+                _context.UserTasks.Remove(task);
+            }
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok("Your account has been deleted successfully.");
+        }
+
+        [HttpGet("user-profile")]
+        public async Task<IActionResult> GetUserProfile([FromHeader] string username)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            return Ok(user);
         }
     }
 }

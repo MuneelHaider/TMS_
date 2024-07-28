@@ -21,7 +21,6 @@ namespace TMS_.Controllers
         [HttpPost("assign")]
         public async Task<IActionResult> AssignTask([FromBody] TaskAssignmentDto taskDto)
         {
-            // Check for duplicate usernames
             var assignedToUser = await _context.Users.SingleOrDefaultAsync(u => u.Username == taskDto.AssignedTo);
             if (assignedToUser == null)
             {
@@ -64,6 +63,100 @@ namespace TMS_.Controllers
             await _context.SaveChangesAsync();
 
             return Ok("Task status updated successfully.");
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteTask(int id, [FromHeader] string adminUsername)
+        {
+            var admin = await _context.Users.FirstOrDefaultAsync(u => u.Username == adminUsername && u.Role == "Admin");
+            if (admin == null)
+            {
+                return Unauthorized("Only admins can delete tasks.");
+            }
+
+            var task = await _context.UserTasks.FindAsync(id);
+            if (task == null)
+            {
+                return NotFound("Task not found.");
+            }
+
+            _context.UserTasks.Remove(task);
+            await _context.SaveChangesAsync();
+
+            return Ok("Task deleted successfully.");
+        }
+
+        [HttpGet("task-counts")]
+        public async Task<IActionResult> GetTaskCounts([FromHeader] string username)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            if (user.Role == "Admin")
+            {
+                var taskCounts = await _context.UserTasks
+                    .GroupBy(t => t.Status)
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                return Ok(taskCounts);
+            }
+            else
+            {
+                var taskCounts = await _context.UserTasks
+                    .Where(t => t.AssignedToId == user.Id)
+                    .GroupBy(t => t.Status)
+                    .Select(g => new { Status = g.Key, Count = g.Count() })
+                    .ToListAsync();
+
+                return Ok(taskCounts);
+            }
+        }
+
+        [HttpGet("user-tasks")]
+        public async Task<IActionResult> GetUserTasks([FromHeader] string username)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            if (user.Role == "Admin")
+            {
+                var tasks = await _context.UserTasks.ToListAsync();
+                return Ok(tasks);
+            }
+            else
+            {
+                var tasks = await _context.UserTasks
+                    .Where(t => t.AssignedToId == user.Id)
+                    .ToListAsync();
+
+                return Ok(tasks);
+            }
+        }
+
+        [HttpGet("task-detail/{taskId}")]
+        public async Task<IActionResult> GetTaskDetail(int taskId, [FromHeader] string username)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            var task = await _context.UserTasks
+                .SingleOrDefaultAsync(t => t.Id == taskId && t.AssignedToId == user.Id);
+            if (task == null && user.Role != "Admin")
+            {
+                return NotFound("Task not found.");
+            }
+
+            return Ok(task);
         }
     }
 
