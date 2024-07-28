@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using TMS_.Data;
 using TMS_.Models;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace TMS_.Controllers
 {
@@ -16,81 +18,68 @@ namespace TMS_.Controllers
             _context = context;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetTasks()
+        [HttpPost("assign")]
+        public async Task<IActionResult> AssignTask([FromBody] TaskAssignmentDto taskDto)
         {
-            var userId = HttpContext.Session.GetString("UserId");
-            var role = HttpContext.Session.GetString("Role");
-
-            if (userId == null)
+            // Check for duplicate usernames
+            var assignedToUser = await _context.Users.SingleOrDefaultAsync(u => u.Username == taskDto.AssignedTo);
+            if (assignedToUser == null)
             {
-                return Unauthorized();
+                return BadRequest("User not found.");
             }
 
-            var tasks = role == "Admin"
-                ? await _context.UserTasks.ToListAsync()
-                : await _context.UserTasks
-                    .Where(t => t.AssignedToId == int.Parse(userId) || t.CreatedById == int.Parse(userId))
-                    .ToListAsync();
-
-            return Ok(tasks);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> CreateTask([FromBody] UserTask task)
-        {
-            var userId = HttpContext.Session.GetString("UserId");
-            if (userId == null)
+            var createdByUser = await _context.Users.SingleOrDefaultAsync(u => u.Role == "Admin" && u.Username == taskDto.CreatedBy);
+            if (createdByUser == null)
             {
-                return Unauthorized();
+                return BadRequest("Admin not found.");
             }
 
-            task.CreatedById = int.Parse(userId);
-            _context.UserTasks.Add(task);
+            var userTask = new UserTask
+            {
+                Title = taskDto.Title,
+                Description = taskDto.Description,
+                DueDate = taskDto.DueDate,
+                Priority = taskDto.Priority,
+                CreatedById = createdByUser.Id,
+                AssignedToId = assignedToUser.Id,
+                Status = "Pending"
+            };
+
+            _context.UserTasks.Add(userTask);
             await _context.SaveChangesAsync();
-            return Ok(task);
+
+            return Ok("Task assigned successfully.");
         }
 
-        [HttpPut("{id}/assign")]
-        public async Task<IActionResult> AssignTask(int id, [FromBody] int assignedToId)
+        [HttpPost("update-status")]
+        public async Task<IActionResult> UpdateTaskStatus([FromBody] TaskStatusUpdateDto statusUpdateDto)
         {
-            var userId = HttpContext.Session.GetString("UserId");
-            var role = HttpContext.Session.GetString("Role");
-
-            if (userId == null || role != "Admin")
+            var userTask = await _context.UserTasks.FindAsync(statusUpdateDto.TaskId);
+            if (userTask == null)
             {
-                return Unauthorized();
+                return NotFound("Task not found.");
             }
 
-            var task = await _context.UserTasks.FindAsync(id);
-            if (task == null)
-            {
-                return NotFound();
-            }
-
-            task.AssignedToId = assignedToId;
+            userTask.Status = statusUpdateDto.Status;
             await _context.SaveChangesAsync();
-            return Ok(task);
+
+            return Ok("Task status updated successfully.");
         }
+    }
 
-        [HttpPut("{id}/update-status")]
-        public async Task<IActionResult> UpdateTaskStatus(int id, [FromBody] string status)
-        {
-            var userId = HttpContext.Session.GetString("UserId");
-            if (userId == null)
-            {
-                return Unauthorized();
-            }
+    public class TaskAssignmentDto
+    {
+        public string Title { get; set; }
+        public string Description { get; set; }
+        public DateTime DueDate { get; set; }
+        public string Priority { get; set; }
+        public string AssignedTo { get; set; } // Username of the assigned user
+        public string CreatedBy { get; set; } // Username of the admin creating the task
+    }
 
-            var task = await _context.UserTasks.FindAsync(id);
-            if (task == null || task.AssignedToId != int.Parse(userId))
-            {
-                return Unauthorized();
-            }
-
-            task.Status = status;
-            await _context.SaveChangesAsync();
-            return Ok(task);
-        }
+    public class TaskStatusUpdateDto
+    {
+        public int TaskId { get; set; }
+        public string Status { get; set; }
     }
 }

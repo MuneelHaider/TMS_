@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using TMS_.Data;
 using TMS_.Models;
+using BCrypt.Net;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace TMS_.Controllers
 {
@@ -21,37 +23,73 @@ namespace TMS_.Controllers
         {
             if (_context.Users.Any(u => u.Username == user.Username))
             {
-                return BadRequest("User already exists");
+                return BadRequest("Username is already taken.");
             }
 
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+            user.Role = "User"; // Ensure role is always set to "User"
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
-            return Ok("User registered successfully");
+
+            return Ok("User registered successfully.");
+        }
+
+        [HttpPost("register-admin")]
+        public async Task<IActionResult> RegisterAdmin(
+            [FromBody] User user,
+            [FromHeader(Name = "adminUsername")] string adminUsername,
+            [FromHeader(Name = "adminPassword")] string adminPassword)
+        {
+            var admin = _context.Users.FirstOrDefault(u => u.Username == adminUsername && u.Role == "Admin");
+            if (admin == null || !BCrypt.Net.BCrypt.Verify(adminPassword, admin.Password))
+            {
+                return Unauthorized("Only admins can add new admins.");
+            }
+
+            if (_context.Users.Any(u => u.Username == user.Username))
+            {
+                return BadRequest("Username is already taken.");
+            }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+            user.Role = "Admin";
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok("Admin registered successfully.");
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] User login)
+        public async Task<IActionResult> Login([FromBody] User loginUser)
         {
-            var user = await _context.Users
-                .FirstOrDefaultAsync(u => u.Username == login.Username && u.Password == login.Password);
-
-            if (user == null)
+            var user = _context.Users.FirstOrDefault(u => u.Username == loginUser.Username);
+            if (user == null || !BCrypt.Net.BCrypt.Verify(loginUser.Password, user.Password))
             {
-                return Unauthorized("Invalid username or password");
+                return Unauthorized("Invalid credentials.");
             }
 
-            HttpContext.Session.SetString("UserId", user.Id.ToString());
-            HttpContext.Session.SetString("Username", user.Username);
-            HttpContext.Session.SetString("Role", user.Role);
-
-            return Ok(new { role = user.Role });
+            return Ok(new { Message = "Login successful", User = user });
         }
 
-        [HttpPost("logout")]
-        public IActionResult Logout()
+        [HttpPost("register-initial-admin")]
+        public async Task<IActionResult> RegisterInitialAdmin([FromBody] User user)
         {
-            HttpContext.Session.Clear();
-            return Ok("Logout successful");
+            if (_context.Users.Any(u => u.Role == "Admin"))
+            {
+                return BadRequest("An admin already exists.");
+            }
+
+            if (_context.Users.Any(u => u.Username == user.Username))
+            {
+                return BadRequest("Username is already taken.");
+            }
+
+            user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
+            user.Role = "Admin";
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+
+            return Ok("Initial admin registered successfully.");
         }
     }
 }

@@ -7,8 +7,8 @@ namespace TMS_.Data
     {
         public TMS_DbContext(DbContextOptions<TMS_DbContext> options) : base(options) { }
 
-        public DbSet<User> Users { get; set; }
-        public DbSet<UserTask> UserTasks { get; set; }
+        public virtual DbSet<User> Users { get; set; }
+        public virtual DbSet<UserTask> UserTasks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

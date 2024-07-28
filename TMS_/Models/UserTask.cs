@@ -7,7 +7,7 @@
         public string Description { get; set; }
         public DateTime DueDate { get; set; }
         public string Priority { get; set; }
-        public string Status { get; set; } // Status can be "Pending", "InProgress", "Completed"
+        public string Status { get; set; } = "Pending";// Status can be "Pending", "InProgress", "Completed"
 
         // Foreign key for the user who created the task
         public int CreatedById { get; set; }
