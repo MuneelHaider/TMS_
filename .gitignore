@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 appsettings.json
 /TMS_/TMS_.csproj
+appsettings.Development.json
