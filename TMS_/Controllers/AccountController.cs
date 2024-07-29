@@ -72,6 +72,48 @@ namespace TMS_.Controllers
             return Ok(new { Message = "Login successful", User = user });
         }
 
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile([FromHeader] string username)
+        {
+            var user = await _context.Users
+                .Include(u => u.AssignedTasks)
+                .Include(u => u.CreatedTasks)
+                .SingleOrDefaultAsync(u => u.Username == username);
+
+            if (user == null)
+            {
+                return NotFound("User not found.");
+            }
+
+            // You can create a DTO to avoid exposing sensitive data such as password
+            var userProfile = new
+            {
+                user.Id,
+                user.Username,
+                user.Role,
+                AssignedTasks = user.AssignedTasks.Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.DueDate,
+                    t.Priority,
+                    t.Status
+                }),
+                CreatedTasks = user.CreatedTasks.Select(t => new
+                {
+                    t.Id,
+                    t.Title,
+                    t.Description,
+                    t.DueDate,
+                    t.Priority,
+                    t.Status
+                })
+            };
+
+            return Ok(userProfile);
+        }
+
         [HttpPost("register-initial-admin")]
         public async Task<IActionResult> RegisterInitialAdmin([FromBody] User user)
         {
@@ -125,26 +167,53 @@ namespace TMS_.Controllers
             return Ok("User deleted successfully.");
         }
 
+        [HttpGet("non-admin-users")]
+        public async Task<IActionResult> GetNonAdminUsers()
+        {
+            var nonAdminUsers = await _context.Users
+                .Where(u => u.Role != "Admin")
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Username,
+                    u.Role
+                })
+                .ToListAsync();
+
+            return Ok(nonAdminUsers);
+        }
+
+
         [HttpDelete("delete-own-account/{username}")]
         public async Task<IActionResult> DeleteOwnAccount(string username)
         {
-            var user = await _context.Users.Include(u => u.AssignedTasks).FirstOrDefaultAsync(u => u.Username == username);
+            var user = await _context.Users.Include(u => u.AssignedTasks).Include(u => u.CreatedTasks).SingleOrDefaultAsync(u => u.Username == username);
+
             if (user == null)
             {
                 return NotFound("User not found.");
             }
 
             // Remove assigned tasks
-            foreach (var task in user.AssignedTasks)
-            {
-                _context.UserTasks.Remove(task);
-            }
+            _context.UserTasks.RemoveRange(user.AssignedTasks);
+
+            // Remove created tasks
+            _context.UserTasks.RemoveRange(user.CreatedTasks);
 
             _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
 
-            return Ok("Your account has been deleted successfully.");
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+
+            return Ok("User deleted successfully.");
         }
+
 
         [HttpGet("user-profile")]
         public async Task<IActionResult> GetUserProfile([FromHeader] string username)
