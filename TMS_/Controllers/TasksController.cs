@@ -127,18 +127,24 @@ namespace TMS_.Controllers
 
             if (user.Role == "Admin")
             {
-                var tasks = await _context.UserTasks.ToListAsync();
+                var tasks = await _context.UserTasks
+                    .Include(t => t.AssignedTo)
+                    .Include(t => t.CreatedBy)
+                    .ToListAsync();
                 return Ok(tasks);
             }
             else
             {
                 var tasks = await _context.UserTasks
                     .Where(t => t.AssignedToId == user.Id)
+                    .Include(t => t.AssignedTo)
+                    .Include(t => t.CreatedBy)
                     .ToListAsync();
 
                 return Ok(tasks);
             }
         }
+
 
         [HttpGet("task-detail/{taskId}")]
         public async Task<IActionResult> GetTaskDetail(int taskId, [FromHeader] string username)
