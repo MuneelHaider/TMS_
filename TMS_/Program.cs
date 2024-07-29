@@ -4,14 +4,15 @@ using TMS_.Data;
 using TMS_.Models;
 using Serilog;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews().AddJsonOptions(options =>
+builder.Services.AddControllers().AddJsonOptions(options =>
 {
-    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.Preserve;
-    options.JsonSerializerOptions.MaxDepth = 32;
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
 builder.Services.AddSession(options =>
@@ -20,6 +21,9 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+
+// Add distributed memory cache
+builder.Services.AddDistributedMemoryCache();
 
 // Configure Entity Framework and SQL Server
 builder.Services.AddDbContext<TMS_DbContext>(options =>
@@ -42,6 +46,17 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TMS_", Version = "v1" });
 });
 
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -62,6 +77,8 @@ app.UseStaticFiles();
 app.UseRouting();
 
 app.UseSession(); // Enable session management
+
+app.UseCors("AllowAll"); // Enable CORS
 
 app.UseAuthorization();
 
