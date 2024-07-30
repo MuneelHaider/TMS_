@@ -7,13 +7,14 @@
         public string Description { get; set; }
         public DateTime DueDate { get; set; }
         public string Priority { get; set; }
-        public string Status { get; set; } = "Pending";// Status can be "Pending", "InProgress", "Completed"
 
-        // Foreign key for the user who created the task
+        public string Status { get; set; } = "Pending"; // set default to pending
+
+        // foreign key for the user who created the task
         public int CreatedById { get; set; }
         public User CreatedBy { get; set; }
 
-        // Foreign key for the user to whom the task is assigned
+        // foreign key for the user to whom the task is assigned
         public int? AssignedToId { get; set; }
         public User AssignedTo { get; set; }
     }

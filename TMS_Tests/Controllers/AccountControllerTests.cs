@@ -16,6 +16,7 @@ namespace TMS_Tests.Controllers
         private readonly Mock<TMS_DbContext> _mockContext;
         private readonly AccountController _controller;
 
+        // setting up the mock context and controller for tests
         public AccountControllerTests()
         {
             var options = new DbContextOptions<TMS_DbContext>();
@@ -23,6 +24,7 @@ namespace TMS_Tests.Controllers
             _controller = new AccountController(_mockContext.Object);
         }
 
+        // helper method to create a mock DbSet
         private Mock<DbSet<T>> CreateMockSet<T>(IQueryable<T> data) where T : class
         {
             var mockSet = new Mock<DbSet<T>>();
@@ -38,6 +40,7 @@ namespace TMS_Tests.Controllers
             return mockSet;
         }
 
+        // test for user registration when user already exists
         [Fact]
         public async Task Register_UserAlreadyExists_ReturnsBadRequest()
         {
@@ -53,6 +56,7 @@ namespace TMS_Tests.Controllers
             Assert.IsType<BadRequestObjectResult>(result);
         }
 
+        // test for user login with invalid credentials
         [Fact]
         public async Task Login_InvalidCredentials_ReturnsUnauthorized()
         {
@@ -63,12 +67,12 @@ namespace TMS_Tests.Controllers
 
             _mockContext.Setup(c => c.Users).Returns(mockSet.Object);
 
-            // Ensure the login object is not null
+            // ensure the login object is not null
             Assert.NotNull(login);
 
             var result = await _controller.Login(login);
 
-            // Ensure the result object is not null
+            // ensure the result object is not null
             Assert.NotNull(result);
 
             Assert.IsType<UnauthorizedObjectResult>(result);

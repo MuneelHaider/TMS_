@@ -5,9 +5,8 @@
         public int Id { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
-        public string Role { get; set; } = "User"; // Default role to "User"
+        public string Role { get; set; } = "User";
 
-        // Navigation properties
         public ICollection<UserTask> AssignedTasks { get; set; } = new List<UserTask>();
         public ICollection<UserTask> CreatedTasks { get; set; } = new List<UserTask>();
     }

@@ -18,6 +18,7 @@ namespace TMS_.Controllers
             _context = context;
         }
 
+        // endpoint to assign a task, checks if user and admin exist, creates and saves task
         [HttpPost("assign")]
         public async Task<IActionResult> AssignTask([FromBody] TaskAssignmentDto taskDto)
         {
@@ -50,6 +51,7 @@ namespace TMS_.Controllers
             return Ok("Task assigned successfully.");
         }
 
+        // endpoint to update task status, checks if task exists, updates status, saves task
         [HttpPost("update-status")]
         public async Task<IActionResult> UpdateTaskStatus([FromBody] TaskStatusUpdateDto statusUpdateDto)
         {
@@ -65,6 +67,7 @@ namespace TMS_.Controllers
             return Ok("Task status updated successfully.");
         }
 
+        // endpoint to delete a task, only admins can do this, deletes task
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id, [FromHeader] string adminUsername)
         {
@@ -86,6 +89,7 @@ namespace TMS_.Controllers
             return Ok("Task deleted successfully.");
         }
 
+        // endpoint to get task counts, returns task counts based on user role
         [HttpGet("task-counts")]
         public async Task<IActionResult> GetTaskCounts([FromHeader] string username)
         {
@@ -116,6 +120,7 @@ namespace TMS_.Controllers
             }
         }
 
+        // endpoint to get user tasks, returns tasks based on user role
         [HttpGet("user-tasks")]
         public async Task<IActionResult> GetUserTasks([FromHeader] string username)
         {
@@ -145,7 +150,7 @@ namespace TMS_.Controllers
             }
         }
 
-
+        // endpoint to get task detail, checks if user and task exist, returns task detail
         [HttpGet("task-detail/{taskId}")]
         public async Task<IActionResult> GetTaskDetail(int taskId, [FromHeader] string username)
         {

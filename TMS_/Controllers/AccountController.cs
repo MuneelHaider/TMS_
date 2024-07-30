@@ -19,6 +19,7 @@ namespace TMS_.Controllers
             _context = context;
         }
 
+        // endpoint to register new user, checks if username is taken, hashes password, sets role, saves user
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] User user)
         {
@@ -28,13 +29,14 @@ namespace TMS_.Controllers
             }
 
             user.Password = BCrypt.Net.BCrypt.HashPassword(user.Password);
-            user.Role = "User"; // Ensure role is always set to "User"
+            user.Role = "User"; // set role to "user"
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
             return Ok("User registered successfully.");
         }
 
+        // endpoint to register new admin, only admins can call this, verifies admin creds, hashes password, sets role, saves admin
         [HttpPost("register-admin")]
         public async Task<IActionResult> RegisterAdmin(
             [FromBody] User user,
@@ -60,6 +62,7 @@ namespace TMS_.Controllers
             return Ok("Admin registered successfully.");
         }
 
+        // endpoint to login, checks username and password, returns user if valid
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] User loginUser)
         {
@@ -72,6 +75,7 @@ namespace TMS_.Controllers
             return Ok(new { Message = "Login successful", User = user });
         }
 
+        // endpoint to get user profile by username, includes assigned and created tasks
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile([FromHeader] string username)
         {
@@ -85,7 +89,6 @@ namespace TMS_.Controllers
                 return NotFound("User not found.");
             }
 
-            // You can create a DTO to avoid exposing sensitive data such as password
             var userProfile = new
             {
                 user.Id,
@@ -114,6 +117,7 @@ namespace TMS_.Controllers
             return Ok(userProfile);
         }
 
+        // endpoint to register the first admin, checks if admin exists, then registers
         [HttpPost("register-initial-admin")]
         public async Task<IActionResult> RegisterInitialAdmin([FromBody] User user)
         {
@@ -135,6 +139,7 @@ namespace TMS_.Controllers
             return Ok("Initial admin registered successfully.");
         }
 
+        // endpoint to delete a user, only admins can do this, removes assigned tasks, deletes user
         [HttpDelete("delete-user/{id}")]
         public async Task<IActionResult> DeleteUser(int id, [FromHeader] string adminUsername)
         {
@@ -155,7 +160,6 @@ namespace TMS_.Controllers
                 return Unauthorized("Admins cannot delete other admins.");
             }
 
-            // Remove assigned tasks
             foreach (var task in user.AssignedTasks)
             {
                 _context.UserTasks.Remove(task);
@@ -167,6 +171,7 @@ namespace TMS_.Controllers
             return Ok("User deleted successfully.");
         }
 
+        // endpoint to get all non-admin users
         [HttpGet("non-admin-users")]
         public async Task<IActionResult> GetNonAdminUsers()
         {
@@ -183,7 +188,7 @@ namespace TMS_.Controllers
             return Ok(nonAdminUsers);
         }
 
-
+        // endpoint for a user to delete their own account, removes assigned and created tasks
         [HttpDelete("delete-own-account/{username}")]
         public async Task<IActionResult> DeleteOwnAccount(string username)
         {
@@ -194,12 +199,8 @@ namespace TMS_.Controllers
                 return NotFound("User not found.");
             }
 
-            // Remove assigned tasks
             _context.UserTasks.RemoveRange(user.AssignedTasks);
-
-            // Remove created tasks
             _context.UserTasks.RemoveRange(user.CreatedTasks);
-
             _context.Users.Remove(user);
 
             try
@@ -214,7 +215,7 @@ namespace TMS_.Controllers
             return Ok("User deleted successfully.");
         }
 
-
+        // endpoint to get user profile by username, returns user if found
         [HttpGet("user-profile")]
         public async Task<IActionResult> GetUserProfile([FromHeader] string username)
         {
