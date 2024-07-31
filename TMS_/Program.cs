@@ -2,18 +2,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using TMS_.Data;
 using Serilog;
+using Serilog.Formatting.Compact;
 using System.Text.Json.Serialization;
+using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// add services to the container
+// Add services to the container.
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
     options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
 });
 
-// configure session with a timeout and essential cookies
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -23,28 +24,33 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddDistributedMemoryCache();
 
-// configure entity framework and sql server
+// Configure Entity Framework and SQL Server.
 builder.Services.AddDbContext<TMS_DbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// configure serilog for logging
+// Configure Serilog for logging.
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
-    .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day)
+    .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "Logs/log.txt",
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] {Message}{NewLine}{Exception}",
+        rollingInterval: RollingInterval.Day,
+        restrictedToMinimumLevel: LogEventLevel.Information
+    )
     .CreateLogger();
 
 builder.Host.UseSerilog();
 
-// configure swagger
+// Configure Swagger.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "TMS_", Version = "v1" });
 });
 
-// configure cors
+// Configure CORS.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -73,7 +79,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
-app.UseSession(); 
+app.UseSession();
 
 app.UseCors("AllowAll");
 
