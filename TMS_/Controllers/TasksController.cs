@@ -4,6 +4,7 @@ using TMS_.Data;
 using TMS_.Models;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 
 namespace TMS_.Controllers
 {
@@ -169,6 +170,42 @@ namespace TMS_.Controllers
 
             return Ok(task);
         }
+
+        // endpoint for searching and filtering tasks
+        [HttpGet("search-tasks")]
+        public async Task<IActionResult> SearchTasks([FromHeader] string username, [FromQuery] string searchTerm, [FromQuery] string status)
+        {
+            var user = await _context.Users.SingleOrDefaultAsync(u => u.Username == username);
+            if (user == null)
+            {
+                return Unauthorized("User not found.");
+            }
+
+            IQueryable<UserTask> tasksQuery;
+
+            if (user.Role == "Admin")
+            {
+                tasksQuery = _context.UserTasks.Include(t => t.AssignedTo).Include(t => t.CreatedBy);
+            }
+            else
+            {
+                tasksQuery = _context.UserTasks.Where(t => t.AssignedToId == user.Id).Include(t => t.AssignedTo).Include(t => t.CreatedBy);
+            }
+
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                tasksQuery = tasksQuery.Where(t => t.Title.Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrEmpty(status) && status != "All")
+            {
+                tasksQuery = tasksQuery.Where(t => t.Status == status);
+            }
+
+            var tasks = await tasksQuery.ToListAsync();
+            return Ok(tasks);
+        }
+
     }
 
     public class TaskAssignmentDto
