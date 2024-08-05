@@ -5,6 +5,7 @@ using Serilog;
 using Serilog.Formatting.Compact;
 using System.Text.Json.Serialization;
 using Serilog.Events;
+using TMS_.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -89,4 +90,27 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
+// Register initial admin if no admin exists
+await RegisterInitialAdmin(app.Services);
+
 app.Run();
+
+async Task RegisterInitialAdmin(IServiceProvider services)
+{
+    using var scope = services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<TMS_DbContext>();
+
+    if (!dbContext.Users.Any(u => u.Role == "Admin"))
+    {
+        var initialAdmin = new User
+        {
+            Username = "Muneel",
+            Password = BCrypt.Net.BCrypt.HashPassword("123"),
+            Role = "Admin"
+        };
+
+        dbContext.Users.Add(initialAdmin);
+        await dbContext.SaveChangesAsync();
+        Console.WriteLine("Initial admin registered successfully.");
+    }
+}
