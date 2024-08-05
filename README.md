@@ -19,9 +19,13 @@ How to run:
    ![image](https://github.com/user-attachments/assets/a27bef19-dda2-4d0f-a0b8-ad023b4a3698)
 
    
-7. You are good to go, run the program using the debugger.
-8. I have configured the program to register an admin upon starting if none exists.
+6. You are good to go, run the program using the debugger.
+7. I have configured the program to register an admin upon starting if none exists.
+
    Credentials:
+
    Username: Muneel
+
    Password: 123
-9. To use the application, please check out the other repo '[TMS-ReactJS](https://github.com/MuneelHaider/TMS-ReactJS)' which contains the frontend webapp.
+
+8. To use the application, please check out the other repo '[TMS-ReactJS](https://github.com/MuneelHaider/TMS-ReactJS)' which contains the frontend webapp.
