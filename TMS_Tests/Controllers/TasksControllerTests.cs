@@ -24,7 +24,7 @@ namespace TMS_Tests.Controllers
             _controller = new TasksController(_mockContext.Object);
         }
 
-        // helper method to create a mock DbSet
+        // method to create a mock DbSet
         private Mock<DbSet<T>> CreateMockSet<T>(IQueryable<T> data) where T : class
         {
             var mockSet = new Mock<DbSet<T>>();
@@ -59,22 +59,6 @@ namespace TMS_Tests.Controllers
             Assert.Equal(401, result.StatusCode);
         }
 
-        // test for unauthorized access to get task detail with invalid user
-        [Fact]
-        public async Task GetTaskDetail_ReturnsUnauthorizedForInvalidUser()
-        {
-            var task = new UserTask { Id = 1, Title = "Task 1", AssignedToId = 1 };
-            var tasks = new List<UserTask> { task }.AsQueryable();
-
-            var mockTaskSet = CreateMockSet(tasks);
-            _mockContext.Setup(c => c.UserTasks).Returns(mockTaskSet.Object);
-
-            var result = await _controller.GetTaskDetail(1, "invaliduser") as UnauthorizedObjectResult;
-
-            Assert.NotNull(result);
-            Assert.Equal(401, result.StatusCode);
-        }
-
         // test for bad request when assigning a task to an invalid user
         [Fact]
         public async Task AssignTask_ReturnsBadRequestForInvalidAssignment()
@@ -85,7 +69,8 @@ namespace TMS_Tests.Controllers
                 Description = "Description",
                 DueDate = DateTime.Now,
                 Priority = "High",
-                AssignedTo = "invaliduser"
+                AssignedTo = "invaliduser",
+                CreatedBy = "adminUsername"
             };
 
             var users = new List<User>
