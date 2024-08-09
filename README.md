@@ -5,8 +5,8 @@ Link to TMS-ReactJS:
 https://github.com/MuneelHaider/TMS-ReactJS/
 
 Requirements:
-1. Visual Studio 2022.
-2. NodeJS.
+1. Visual Studio 2022 with C# and .NET Modules installed.
+2. NodeJS installed on your systems.
 3. SQL Server and SQL Server Management Studio.
 
 How to run:
